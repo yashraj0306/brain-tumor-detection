@@ -1,0 +1,2014 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroScan · Advanced MRI Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&family=Figtree:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #141f3e;
+            --bg2: #18294f;
+            --panel: rgba(8, 16, 35, 0.92);
+            --panel2: rgba(10, 20, 45, 0.85);
+            --border: rgba(0, 180, 255, 0.08);
+            --border-hi: rgba(0, 180, 255, 0.18);
+            --border-glow: rgba(0, 180, 255, 0.45);
+            --cyan: #00b4ff;
+            --cyan-dim: rgba(0, 180, 255, 0.6);
+            --teal: #00ffd5;
+            --purple: #a855f7;
+            --red: #ff4d6d;
+            --green: #00ff88;
+            --blue: #4d9fff;
+            --amber: #fbbf24;
+            --text: #c8d8f0;
+            --text-dim: #4a6080;
+            --mono: 'JetBrains Mono', monospace;
+            --display: 'Oxanium', sans-serif;
+            --body: 'Figtree', sans-serif;
+            --glow-cyan: 0 0 20px rgba(0, 180, 255, 0.4);
+            --glow-red: 0 0 20px rgba(255, 77, 109, 0.5);
+            --glow-green: 0 0 20px rgba(0, 255, 136, 0.4);
+            --glow-purple: 0 0 20px rgba(168, 85, 247, 0.4);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: var(--body);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        /* ── CUSTOM CURSOR ── */
+        #cursor {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid var(--cyan);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.2s, height 0.2s, background 0.2s;
+            box-shadow: var(--glow-cyan);
+        }
+
+        #cursor-trail {
+            position: fixed;
+            width: 36px;
+            height: 36px;
+            border: 1px solid rgba(0, 180, 255, 0.2);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: left 0.12s ease, top 0.12s ease;
+        }
+
+        body:has(button:hover) #cursor,
+        body:has(label:hover) #cursor,
+        body:has(.upload-zone:hover) #cursor {
+            width: 20px;
+            height: 20px;
+            background: rgba(0, 180, 255, 0.15);
+        }
+
+        /* ── CANVAS BACKGROUND ── */
+        #bgCanvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        /* ── NOISE GRAIN ── */
+        .grain {
+            position: fixed;
+            inset: -50%;
+            width: 200%;
+            height: 200%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.028;
+            animation: grainShift 0.5s steps(2) infinite;
+        }
+
+        @keyframes grainShift {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            25% {
+                transform: translate(-2%, 1%);
+            }
+
+            50% {
+                transform: translate(1%, -1%);
+            }
+
+            75% {
+                transform: translate(2%, 2%);
+            }
+
+            100% {
+                transform: translate(-1%, -2%);
+            }
+        }
+
+        /* ── SCANLINES ── */
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 3px,
+                    rgba(0, 0, 0, 0.06) 3px, rgba(0, 0, 0, 0.06) 4px);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* ── HUD CORNERS ── */
+        .hud-corner {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0.4;
+        }
+
+        .hud-corner.tl {
+            top: 16px;
+            left: 16px;
+            border-top: 1px solid var(--cyan);
+            border-left: 1px solid var(--cyan);
+        }
+
+        .hud-corner.tr {
+            top: 16px;
+            right: 16px;
+            border-top: 1px solid var(--cyan);
+            border-right: 1px solid var(--cyan);
+        }
+
+        .hud-corner.bl {
+            bottom: 16px;
+            left: 16px;
+            border-bottom: 1px solid var(--cyan);
+            border-left: 1px solid var(--cyan);
+        }
+
+        .hud-corner.br {
+            bottom: 16px;
+            right: 16px;
+            border-bottom: 1px solid var(--cyan);
+            border-right: 1px solid var(--cyan);
+        }
+
+        /* ── TOP BAR ── */
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 48px;
+            z-index: 100;
+            background: rgba(3, 6, 15, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+        }
+
+        .topbar-logo {
+            font-family: var(--display);
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            color: var(--cyan);
+            text-shadow: var(--glow-cyan);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .topbar-logo::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--cyan);
+            border-radius: 50%;
+            box-shadow: var(--glow-cyan);
+            animation: pulseDot 2s ease-in-out infinite;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .topbar-stat {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 0.06em;
+        }
+
+        .topbar-stat span {
+            color: var(--cyan);
+        }
+
+        .topbar-time {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+        }
+
+        /* ── MAIN WRAPPER ── */
+        .wrapper {
+            position: relative;
+            z-index: 10;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 80px 24px 60px;
+        }
+
+        /* ── HERO SECTION ── */
+        .hero {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: end;
+            gap: 40px;
+            margin-bottom: 48px;
+            animation: fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @media (max-width: 700px) {
+            .hero {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hero-text {}
+
+        .hero-eyebrow {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--cyan);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hero-eyebrow::before,
+        .hero-eyebrow::after {
+            content: '';
+            height: 1px;
+            background: linear-gradient(90deg, var(--cyan), transparent);
+            flex: 1;
+            max-width: 40px;
+        }
+
+        .hero-eyebrow::before {
+            background: linear-gradient(90deg, transparent, var(--cyan));
+        }
+
+        h1 {
+            font-family: var(--display);
+            font-size: clamp(2.4rem, 5.5vw, 4rem);
+            font-weight: 800;
+            line-height: 1.0;
+            letter-spacing: -0.01em;
+            color: #fff;
+            text-shadow: 0 0 80px rgba(0, 180, 255, 0.15);
+        }
+
+        h1 .accent {
+            color: transparent;
+            -webkit-text-stroke: 1px var(--cyan);
+            text-stroke: 1px var(--cyan);
+            filter: drop-shadow(0 0 12px rgba(0, 180, 255, 0.5));
+        }
+
+        h1 .glow {
+            color: var(--cyan);
+            text-shadow: var(--glow-cyan);
+        }
+
+        .hero-desc {
+            margin-top: 16px;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            max-width: 500px;
+            line-height: 1.7;
+        }
+
+        .hero-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border-hi);
+            border-radius: 12px;
+            overflow: hidden;
+            min-width: 260px;
+        }
+
+        .metric-cell {
+            background: var(--panel);
+            padding: 16px 18px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-cell::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 10%;
+            right: 10%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .metric-cell:hover::before {
+            opacity: 1;
+        }
+
+        .m-val {
+            font-family: var(--display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--cyan);
+            text-shadow: var(--glow-cyan);
+            display: block;
+        }
+
+        .m-lbl {
+            font-family: var(--mono);
+            font-size: 0.58rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-top: 3px;
+            display: block;
+        }
+
+        /* ── MAIN LAYOUT ── */
+        .app-layout {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+
+        @media (max-width: 800px) {
+            .app-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ── PANEL BASE ── */
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border-hi);
+            border-radius: 14px;
+            overflow: hidden;
+            position: relative;
+            backdrop-filter: blur(20px);
+            animation: fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0, 180, 255, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        /* corner accents */
+        .panel::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 40px;
+            height: 40px;
+            border-top: 1px solid var(--cyan);
+            border-left: 1px solid var(--cyan);
+            border-radius: 14px 0 0 0;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-title {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--cyan);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title::before {
+            content: '';
+            width: 4px;
+            height: 4px;
+            background: var(--cyan);
+            border-radius: 50%;
+            box-shadow: var(--glow-cyan);
+        }
+
+        .panel-tag {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            letter-spacing: 0.08em;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        /* ── LEFT COLUMN ── */
+        .left-col {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* ── UPLOAD ZONE ── */
+        .upload-zone {
+            border: 1px dashed var(--border-hi);
+            border-radius: 10px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s, background 0.3s, transform 0.2s;
+            position: relative;
+            overflow: hidden;
+            background: rgba(0, 180, 255, 0.02);
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            border-color: var(--cyan);
+            background: rgba(0, 180, 255, 0.06);
+            transform: scale(1.01);
+        }
+
+        .upload-zone input {
+            display: none;
+        }
+
+        /* animated corner dots */
+        .upload-zone .corner {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+        }
+
+        .upload-zone .corner::before,
+        .upload-zone .corner::after {
+            content: '';
+            position: absolute;
+            background: var(--cyan);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .upload-zone .corner::before {
+            width: 1px;
+            height: 100%;
+        }
+
+        .upload-zone .corner::after {
+            width: 100%;
+            height: 1px;
+        }
+
+        .upload-zone:hover .corner::before,
+        .upload-zone:hover .corner::after {
+            opacity: 1;
+        }
+
+        .corner.tl {
+            top: 6px;
+            left: 6px;
+        }
+
+        .corner.tl::before {
+            top: 0;
+            left: 0;
+        }
+
+        .corner.tl::after {
+            top: 0;
+            left: 0;
+        }
+
+        .corner.tr {
+            top: 6px;
+            right: 6px;
+            transform: scaleX(-1);
+        }
+
+        .corner.bl {
+            bottom: 6px;
+            left: 6px;
+            transform: scaleY(-1);
+        }
+
+        .corner.br {
+            bottom: 6px;
+            right: 6px;
+            transform: scale(-1);
+        }
+
+        .upload-icon-wrap {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 14px;
+            border-radius: 50%;
+            border: 1px solid var(--border-hi);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--cyan-dim);
+            position: relative;
+            transition: border-color 0.3s;
+        }
+
+        .upload-icon-wrap::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+        }
+
+        .upload-zone:hover .upload-icon-wrap {
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        .upload-text {
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .upload-text strong {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .upload-formats {
+            font-family: var(--mono);
+            font-size: 0.62rem;
+            color: var(--text-dim);
+            letter-spacing: 0.08em;
+            margin-top: 8px;
+            opacity: 0.6;
+        }
+
+        /* PREVIEW */
+        .preview-container {
+            display: none;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #preview {
+            width: 100%;
+            display: block;
+            filter: grayscale(0.2) contrast(1.15) brightness(0.95);
+        }
+
+        .preview-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(3, 6, 15, 0.9) 0%, transparent 40%);
+        }
+
+        .preview-data {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .preview-fname {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: #fff;
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .preview-meta {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            text-align: right;
+        }
+
+        /* scan line on preview */
+        .preview-container .scan-bar {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, var(--cyan) 30%, var(--teal) 70%, transparent 100%);
+            box-shadow: 0 0 12px var(--cyan);
+            animation: scanY 3s ease-in-out infinite;
+            pointer-events: none;
+            display: none;
+        }
+
+        .preview-container.scanning .scan-bar {
+            display: block;
+        }
+
+        @keyframes scanY {
+            0% {
+                top: 0;
+                opacity: 0;
+            }
+
+            5% {
+                opacity: 1;
+            }
+
+            95% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        /* ── RUN BUTTON ── */
+        #predictBtn {
+            width: 100%;
+            padding: 15px;
+            background: transparent;
+            border: 1px solid var(--border-hi);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: var(--display);
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s, color 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        #predictBtn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0, 180, 255, 0.08), rgba(0, 255, 213, 0.05));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #predictBtn:not(:disabled):hover {
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        #predictBtn:not(:disabled):hover::before {
+            opacity: 1;
+        }
+
+        #predictBtn:not(:disabled):hover {
+            box-shadow: 0 0 30px rgba(0, 180, 255, 0.15), inset 0 0 20px rgba(0, 180, 255, 0.05);
+        }
+
+        #predictBtn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        #predictBtn.running {
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        #predictBtn.running::before {
+            opacity: 1;
+        }
+
+        /* shimmer sweep */
+        #predictBtn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+            transform: skewX(-20deg);
+        }
+
+        #predictBtn:not(:disabled):hover::after {
+            animation: sweep 0.8s ease forwards;
+        }
+
+        @keyframes sweep {
+            to {
+                left: 150%;
+            }
+        }
+
+        .btn-spinner {
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid rgba(0, 180, 255, 0.25);
+            border-top-color: var(--cyan);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            display: none;
+            flex-shrink: 0;
+        }
+
+        #predictBtn.running .btn-spinner {
+            display: block;
+        }
+
+        /* ── MODEL SPEC PANEL ── */
+        .spec-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .spec-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 11px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .spec-row:last-child {
+            border-bottom: none;
+        }
+
+        .spec-key {
+            font-family: var(--mono);
+            font-size: 0.62rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            width: 90px;
+            flex-shrink: 0;
+            padding-top: 2px;
+        }
+
+        .spec-val {
+            font-size: 0.82rem;
+            color: var(--text);
+            flex: 1;
+            line-height: 1.5;
+        }
+
+        .chip {
+            display: inline-block;
+            font-family: var(--mono);
+            font-size: 0.62rem;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin: 2px 3px 2px 0;
+            border: 1px solid;
+        }
+
+        .chip-cyan {
+            color: var(--cyan);
+            border-color: rgba(0, 180, 255, 0.3);
+            background: rgba(0, 180, 255, 0.06);
+        }
+
+        .chip-purple {
+            color: var(--purple);
+            border-color: rgba(168, 85, 247, 0.3);
+            background: rgba(168, 85, 247, 0.06);
+        }
+
+        .chip-red {
+            color: var(--red);
+            border-color: rgba(255, 77, 109, 0.3);
+            background: rgba(255, 77, 109, 0.06);
+        }
+
+        .chip-green {
+            color: var(--green);
+            border-color: rgba(0, 255, 136, 0.3);
+            background: rgba(0, 255, 136, 0.06);
+        }
+
+        .chip-blue {
+            color: var(--blue);
+            border-color: rgba(77, 159, 255, 0.3);
+            background: rgba(77, 159, 255, 0.06);
+        }
+
+        .chip-amber {
+            color: var(--amber);
+            border-color: rgba(251, 191, 36, 0.3);
+            background: rgba(251, 191, 36, 0.06);
+        }
+
+        /* ── RIGHT COLUMN ── */
+        .right-col {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* ── IDLE STATE ── */
+        .idle-panel {
+            aspect-ratio: 1;
+            max-height: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .radar-wrap {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin-bottom: 24px;
+        }
+
+        .radar-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 180, 255, 0.1);
+        }
+
+        .radar-ring:nth-child(1) {
+            inset: 0;
+        }
+
+        .radar-ring:nth-child(2) {
+            inset: 25%;
+        }
+
+        .radar-ring:nth-child(3) {
+            inset: 50%;
+        }
+
+        .radar-sweep {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, transparent 340deg, rgba(0, 180, 255, 0.15) 360deg);
+            animation: radarSweep 3s linear infinite;
+        }
+
+        .radar-center {
+            position: absolute;
+            inset: 45%;
+            background: var(--cyan);
+            border-radius: 50%;
+            box-shadow: var(--glow-cyan);
+        }
+
+        @keyframes radarSweep {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .idle-txt {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 0.12em;
+            text-align: center;
+        }
+
+        .idle-txt span {
+            display: block;
+            color: var(--cyan);
+            font-size: 0.6rem;
+            margin-top: 4px;
+            opacity: 0.6;
+            animation: blink 2s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* ── RESULTS PANELS ── */
+        #results-container {
+            display: none;
+        }
+
+        .results-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* DIAGNOSIS PANEL */
+        .diagnosis-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .diag-main {}
+
+        .diag-type {
+            font-family: var(--display);
+            font-size: 2rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            line-height: 1;
+        }
+
+        .diag-type.glioma {
+            color: var(--red);
+            text-shadow: var(--glow-red);
+        }
+
+        .diag-type.meningioma {
+            color: var(--green);
+            text-shadow: var(--glow-green);
+        }
+
+        .diag-type.pituitary {
+            color: var(--blue);
+            text-shadow: 0 0 20px rgba(77, 159, 255, 0.5);
+        }
+
+        .diag-type.no_tumor {
+            color: var(--teal);
+            text-shadow: 0 0 20px rgba(0, 255, 213, 0.4);
+        }
+
+        .diag-sub {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            margin-top: 4px;
+        }
+
+        .conf-ring-wrap {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            flex-shrink: 0;
+        }
+
+        .conf-ring-svg {
+            transform: rotate(-90deg);
+        }
+
+        .ring-bg {
+            stroke: rgba(0, 180, 255, 0.1);
+            fill: none;
+            stroke-width: 4;
+        }
+
+        .ring-fg {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .conf-ring-val {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--display);
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .conf-ring-lbl {
+            font-family: var(--mono);
+            font-size: 0.48rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            margin-top: 2px;
+        }
+
+        /* PROBABILITY BARS */
+        .prob-section {
+            margin-top: 4px;
+        }
+
+        .prob-label {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .prob-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .prob-item {
+            margin-bottom: 12px;
+        }
+
+        .prob-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .prob-name {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            text-transform: capitalize;
+            color: var(--text);
+            letter-spacing: 0.05em;
+        }
+
+        .prob-pct {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .bar-track {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 100px;
+            width: 0%;
+            transition: width 1s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+        }
+
+        .bar-fill::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .bar-fill.glioma {
+            background: linear-gradient(90deg, rgba(255, 77, 109, 0.4), var(--red));
+        }
+
+        .bar-fill.glioma::after {
+            background: var(--red);
+            box-shadow: var(--glow-red);
+        }
+
+        .bar-fill.meningioma {
+            background: linear-gradient(90deg, rgba(0, 255, 136, 0.4), var(--green));
+        }
+
+        .bar-fill.meningioma::after {
+            background: var(--green);
+            box-shadow: var(--glow-green);
+        }
+
+        .bar-fill.pituitary {
+            background: linear-gradient(90deg, rgba(77, 159, 255, 0.4), var(--blue));
+        }
+
+        .bar-fill.pituitary::after {
+            background: var(--blue);
+            box-shadow: 0 0 8px rgba(77, 159, 255, 0.6);
+        }
+
+        .bar-fill.no_tumor {
+            background: linear-gradient(90deg, rgba(0, 255, 213, 0.4), var(--teal));
+        }
+
+        .bar-fill.no_tumor::after {
+            background: var(--teal);
+            box-shadow: 0 0 8px rgba(0, 255, 213, 0.5);
+        }
+
+        /* ── SEGMENTATION PANEL ── */
+        .seg-header-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .seg-badge {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            letter-spacing: 0.1em;
+            padding: 3px 9px;
+            border-radius: 3px;
+            border: 1px solid;
+        }
+
+        .seg-badge.active {
+            color: var(--green);
+            border-color: rgba(0, 255, 136, 0.3);
+            background: rgba(0, 255, 136, 0.06);
+        }
+
+        .seg-img-wrap {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid var(--border);
+        }
+
+        #overlay-img {
+            width: 100%;
+            display: block;
+        }
+
+        /* grid overlay */
+        .seg-img-wrap::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0, 180, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 180, 255, 0.03) 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* vignette */
+        .seg-img-wrap::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 60%, rgba(3, 6, 15, 0.5) 100%);
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        .seg-scan-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyan), var(--teal), transparent);
+            box-shadow: 0 0 10px var(--cyan);
+            z-index: 4;
+            display: none;
+            animation: scanY 2s ease-in-out infinite;
+        }
+
+        .seg-img-wrap.scanning .seg-scan-line {
+            display: block;
+        }
+
+        .seg-legend {
+            display: flex;
+            gap: 16px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .leg-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--mono);
+            font-size: 0.62rem;
+            color: var(--text-dim);
+            letter-spacing: 0.08em;
+        }
+
+        .leg-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        /* ── LOADING STATE OVERLAY ── */
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            background: rgba(3, 6, 15, 0.7);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #loadingOverlay.active {
+            display: flex;
+        }
+
+        .loading-box {
+            border: 1px solid var(--border-hi);
+            border-radius: 12px;
+            background: var(--panel);
+            padding: 32px 44px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+            animation: loadBar 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loadBar {
+            0% {
+                transform: scaleX(0) translateX(-100%);
+            }
+
+            50% {
+                transform: scaleX(1) translateX(0);
+            }
+
+            100% {
+                transform: scaleX(0) translateX(100%);
+            }
+        }
+
+        .loading-anim {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            position: relative;
+        }
+
+        .loading-anim::before,
+        .loading-anim::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+        }
+
+        .loading-anim::before {
+            inset: 0;
+            border: 2px solid transparent;
+            border-top-color: var(--cyan);
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-anim::after {
+            inset: 8px;
+            border: 2px solid transparent;
+            border-bottom-color: var(--teal);
+            animation: spin 0.7s linear infinite reverse;
+        }
+
+        .loading-title {
+            font-family: var(--display);
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            letter-spacing: 0.08em;
+        }
+
+        .loading-steps {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .loading-step {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.06em;
+            transition: color 0.3s;
+        }
+
+        .loading-step.active {
+            color: var(--cyan);
+        }
+
+        .loading-step.done {
+            color: var(--green);
+        }
+
+        .step-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            border: 1px solid var(--text-dim);
+            flex-shrink: 0;
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .loading-step.active .step-dot {
+            background: var(--cyan);
+            border-color: var(--cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .loading-step.done .step-dot {
+            background: var(--green);
+            border-color: var(--green);
+        }
+
+        /* ── ERROR MSG ── */
+        .error-bar {
+            display: none;
+            background: rgba(255, 77, 109, 0.08);
+            border: 1px solid rgba(255, 77, 109, 0.25);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            color: var(--red);
+            letter-spacing: 0.06em;
+            margin-top: 8px;
+        }
+
+        /* ── FOOTER ── */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: gap;
+            animation: fadeUp 0.9s 0.3s ease both;
+        }
+
+        .footer-brand {
+            font-family: var(--mono);
+            font-size: 0.62rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+        }
+
+        .footer-brand span {
+            color: var(--cyan);
+        }
+
+        .footer-info {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            opacity: 0.5;
+            letter-spacing: 0.06em;
+        }
+
+        /* ── KEYFRAMES ── */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulseDot {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* STAGGER DELAYS */
+        .panel:nth-child(1) {
+            animation-delay: 0.05s;
+        }
+
+        .panel:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .panel:nth-child(3) {
+            animation-delay: 0.15s;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #0f1f40;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- CURSOR -->
+    <div id="cursor"></div>
+    <div id="cursor-trail"></div>
+
+    <!-- CANVAS BACKGROUND -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- EFFECTS -->
+    <div class="grain"></div>
+    <div class="scanlines"></div>
+
+    <!-- HUD CORNERS -->
+    <div class="hud-corner tl"></div>
+    <div class="hud-corner tr"></div>
+    <div class="hud-corner bl"></div>
+    <div class="hud-corner br"></div>
+
+    <!-- TOP BAR -->
+    <nav class="topbar">
+        <div class="topbar-logo">NEUROSCAN</div>
+        <div class="topbar-right">
+            <div class="topbar-stat">MODEL <span>best_model_v2.pth</span></div>
+            <div class="topbar-stat">DICE <span>0.890</span></div>
+            <div class="topbar-stat">ACC <span>99.0%</span></div>
+        </div>
+    </nav>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay">
+        <div class="loading-box">
+            <div class="loading-anim"></div>
+            <div class="loading-title">RUNNING INFERENCE</div>
+            <div class="loading-steps" id="loadingSteps">
+                <div class="loading-step" data-step="0">
+                    <div class="step-dot"></div>Preprocessing MRI scan
+                </div>
+                <div class="loading-step" data-step="1">
+                    <div class="step-dot"></div>Encoder feature extraction
+                </div>
+                <div class="loading-step" data-step="2">
+                    <div class="step-dot"></div>Attention UNet++ segmentation
+                </div>
+                <div class="loading-step" data-step="3">
+                    <div class="step-dot"></div>Classification head inference
+                </div>
+                <div class="loading-step" data-step="4">
+                    <div class="step-dot"></div>Generating overlay
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN WRAPPER -->
+    <div class="wrapper">
+
+        <!-- HERO -->
+        <div class="hero">
+            <div class="hero-text">
+                <div class="hero-eyebrow">Brain MRI Intelligence System · BRISC 2025</div>
+                <h1>NEURO<br><span class="accent">SCAN</span></h1>
+                <p class="hero-desc">Multi-task deep learning for simultaneous tumor segmentation and classification.
+                    Attention UNet++ with EfficientNetB3 encoder, scSE attention modules.</p>
+            </div>
+            <div class="hero-metrics">
+                <div class="metric-cell">
+                    <span class="m-val">0.890</span>
+                    <span class="m-lbl">Dice</span>
+                </div>
+                <div class="metric-cell">
+                    <span class="m-val">99%</span>
+                    <span class="m-lbl">Acc</span>
+                </div>
+                <div class="metric-cell">
+                    <span class="m-val">0.99</span>
+                    <span class="m-lbl">F1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- APP LAYOUT -->
+        <div class="app-layout">
+
+            <!-- LEFT: UPLOAD + SPEC -->
+            <div class="left-col">
+
+                <!-- UPLOAD PANEL -->
+                <div class="panel" style="animation-delay:0.1s">
+                    <div class="panel-header">
+                        <div class="panel-title">Input MRI Scan</div>
+                        <div class="panel-tag">PNG · JPG · JPEG</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="upload-zone" id="dropZone">
+                            <input type="file" id="fileInput" accept="image/*">
+                            <label for="fileInput">
+                                <div class="corner tl"></div>
+                                <div class="corner tr"></div>
+                                <div class="corner bl"></div>
+                                <div class="corner br"></div>
+                                <div class="upload-icon-wrap">
+                                    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5"
+                                        viewBox="0 0 24 24">
+                                        <path d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1M16 12l-4-4-4 4M12 8v8" />
+                                    </svg>
+                                </div>
+                                <p class="upload-text">
+                                    <strong>Click to upload</strong> or drag &amp; drop
+                                </p>
+                                <p class="upload-formats">PNG · JPG · JPEG · DICOM preview</p>
+                            </label>
+                        </div>
+
+                        <div class="preview-container" id="previewContainer">
+                            <div class="scan-bar"></div>
+                            <img id="preview" alt="MRI scan preview">
+                            <div class="preview-overlay"></div>
+                            <div class="preview-data">
+                                <span class="preview-fname" id="fileName">—</span>
+                                <span class="preview-meta" id="fileMeta">—</span>
+                            </div>
+                        </div>
+
+                        <div class="error-bar" id="errorBar">⚠ INFERENCE FAILED — CHECK SERVER CONNECTION</div>
+
+                        <button id="predictBtn" disabled style="margin-top:14px">
+                            <div class="btn-spinner"></div>
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24" id="btnIcon">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M10 8l6 4-6 4V8z" />
+                            </svg>
+                            <span id="btnLabel">Run Inference</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- MODEL SPEC PANEL -->
+                <div class="panel" style="animation-delay:0.2s">
+                    <div class="panel-header">
+                        <div class="panel-title">Model Specification</div>
+                        <div class="panel-tag">v2.0</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="spec-grid">
+                            <div class="spec-row">
+                                <span class="spec-key">Backbone</span>
+                                <span class="spec-val"><span class="chip chip-cyan">EfficientNetB3</span><span
+                                        class="chip chip-purple">scSE</span></span>
+                            </div>
+                            <div class="spec-row">
+                                <span class="spec-key">Decoder</span>
+                                <span class="spec-val"><span class="chip chip-cyan">Attention UNet++</span></span>
+                            </div>
+                            <div class="spec-row">
+                                <span class="spec-key">Tasks</span>
+                                <span class="spec-val"><span class="chip chip-amber">Segmentation</span><span
+                                        class="chip chip-amber">Classification</span></span>
+                            </div>
+                            <div class="spec-row">
+                                <span class="spec-key">Classes</span>
+                                <span class="spec-val">
+                                    <span class="chip chip-red">Glioma</span>
+                                    <span class="chip chip-green">Meningioma</span>
+                                    <span class="chip chip-blue">Pituitary</span>
+                                    <span class="chip chip-cyan">No Tumor</span>
+                                </span>
+                            </div>
+                            <div class="spec-row">
+                                <span class="spec-key">Training</span>
+                                <span class="spec-val" style="font-size:0.78rem;color:#4a6080">~6000 MRIs · 10 epochs ·
+                                    lr 1e-4→1e-5</span>
+                            </div>
+                            <div class="spec-row">
+                                <span class="spec-key">Losses</span>
+                                <span class="spec-val"><span class="chip chip-purple">BCEWithLogits</span><span
+                                        class="chip chip-purple">CrossEntropy</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /left-col -->
+
+            <!-- RIGHT: IDLE + RESULTS -->
+            <div class="right-col">
+
+                <!-- IDLE STATE -->
+                <div class="panel idle-panel" id="idlePanel" style="animation-delay:0.15s">
+                    <div class="radar-wrap">
+                        <div class="radar-ring"></div>
+                        <div class="radar-ring"></div>
+                        <div class="radar-ring"></div>
+                        <div class="radar-sweep"></div>
+                        <div class="radar-center"></div>
+                    </div>
+                    <div class="idle-txt">
+                        AWAITING MRI INPUT
+                        <span>SYSTEM READY_</span>
+                    </div>
+                </div>
+
+                <!-- RESULTS -->
+                <div id="results-container">
+                    <div class="results-inner">
+
+                        <!-- DIAGNOSIS -->
+                        <div class="panel" id="diagPanel">
+                            <div class="panel-header">
+                                <div class="panel-title">Diagnosis</div>
+                                <div class="panel-tag" id="diagTimestamp">—</div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="diagnosis-header">
+                                    <div class="diag-main">
+                                        <div class="diag-type" id="labelText">—</div>
+                                        <div class="diag-sub" id="diagSub">MULTI-TASK INFERENCE RESULT</div>
+                                    </div>
+                                    <div class="conf-ring-wrap">
+                                        <svg class="conf-ring-svg" width="80" height="80" viewBox="0 0 80 80">
+                                            <circle class="ring-bg" cx="40" cy="40" r="32" />
+                                            <circle class="ring-fg" id="ringFg" cx="40" cy="40" r="32"
+                                                stroke-dasharray="201" stroke-dashoffset="201" stroke="var(--cyan)" />
+                                        </svg>
+                                        <div class="conf-ring-val">
+                                            <span id="confPct">—</span>
+                                            <span class="conf-ring-lbl">CONF</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="prob-section">
+                                    <div class="prob-label">Class Probabilities</div>
+                                    <div id="probBars"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SEGMENTATION -->
+                        <div class="panel" id="segPanel">
+                            <div class="panel-header">
+                                <div class="panel-title">Segmentation Overlay</div>
+                                <div class="seg-badge active" id="segStatus">MASK READY</div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="seg-img-wrap" id="segImgWrap">
+                                    <div class="seg-scan-line"></div>
+                                    <img id="overlay-img" alt="Segmentation overlay" style="display:none">
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div><!-- /right-col -->
+        </div><!-- /app-layout -->
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <div class="footer-brand">NEUROSCAN · <span>BRISC 2025</span> · Attention UNet++ + EfficientNetB3</div>
+            <div class="footer-info">best_model_v2.pth · Dice 0.890 · Acc 0.99 · F1 0.99</div>
+        </div>
+
+    </div><!-- /wrapper -->
+
+    <script>
+        /* ── CURSOR ── */
+        const cursor = document.getElementById('cursor');
+        const trail = document.getElementById('cursor-trail');
+        document.addEventListener('mousemove', e => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+            setTimeout(() => {
+                trail.style.left = e.clientX + 'px';
+                trail.style.top = e.clientY + 'px';
+            }, 80);
+        });
+
+        /* ── CANVAS PARTICLE NETWORK ── */
+        (function () {
+            const canvas = document.getElementById('bgCanvas');
+            const ctx = canvas.getContext('2d');
+            let W, H, particles = [];
+
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            class Particle {
+                constructor() { this.reset(); }
+                reset() {
+                    this.x = Math.random() * W;
+                    this.y = Math.random() * H;
+                    this.vx = (Math.random() - 0.5) * 0.25;
+                    this.vy = (Math.random() - 0.5) * 0.25;
+                    this.r = Math.random() * 1.5 + 0.3;
+                    this.a = Math.random() * 0.4 + 0.1;
+                }
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(0,180,255,${this.a})`;
+                    ctx.fill();
+                }
+            }
+
+            for (let i = 0; i < 90; i++) particles.push(new Particle());
+
+            function drawConnections() {
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const d = Math.sqrt(dx * dx + dy * dy);
+                        if (d < 100) {
+                            ctx.beginPath();
+                            ctx.strokeStyle = `rgba(0,180,255,${0.06 * (1 - d / 100)})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            function loop() {
+                ctx.clearRect(0, 0, W, H);
+                particles.forEach(p => { p.update(); p.draw(); });
+                drawConnections();
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+
+        /* ── FILE HANDLING ── */
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const preview = document.getElementById('preview');
+        const prevContainer = document.getElementById('previewContainer');
+
+        function loadFile(file) {
+            if (!file || !file.type.startsWith('image/')) return;
+            preview.src = URL.createObjectURL(file);
+            prevContainer.style.display = 'block';
+            document.getElementById('fileName').textContent =
+                file.name.length > 24 ? file.name.slice(0, 22) + '…' : file.name;
+            document.getElementById('fileMeta').textContent =
+                (file.size / 1024).toFixed(1) + ' KB';
+            document.getElementById('predictBtn').disabled = false;
+            document.getElementById('errorBar').style.display = 'none';
+        }
+
+        fileInput.addEventListener('change', () => loadFile(fileInput.files[0]));
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const f = e.dataTransfer.files[0];
+            if (f) { const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files; loadFile(f); }
+        });
+
+        /* ── LOADING STEPS ANIMATION ── */
+        function animateSteps() {
+            const steps = document.querySelectorAll('.loading-step');
+            let i = 0;
+            return new Promise(resolve => {
+                function next() {
+                    if (i > 0) steps[i - 1].classList.remove('active'), steps[i - 1].classList.add('done');
+                    if (i < steps.length) {
+                        steps[i].classList.add('active');
+                        i++;
+                        setTimeout(next, 420 + Math.random() * 200);
+                    } else {
+                        resolve();
+                    }
+                }
+                next();
+            });
+        }
+        function resetSteps() {
+            document.querySelectorAll('.loading-step').forEach(s => {
+                s.classList.remove('active', 'done');
+            });
+        }
+
+        /* ── INFERENCE ── */
+        document.getElementById('predictBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('predictBtn');
+            const overlay = document.getElementById('loadingOverlay');
+            const errorBar = document.getElementById('errorBar');
+            const idlePanel = document.getElementById('idlePanel');
+
+            btn.disabled = true;
+            btn.classList.add('running');
+            document.getElementById('btnLabel').textContent = 'Analyzing…';
+            document.getElementById('btnIcon').style.display = 'none';
+            errorBar.style.display = 'none';
+            prevContainer.classList.add('scanning');
+
+            overlay.classList.add('active');
+            resetSteps();
+            animateSteps();
+
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                const res = await fetch('/predict', { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('Server error');
+                const data = await res.json();
+
+                // Hide idle, show results
+                idlePanel.style.display = 'none';
+                document.getElementById('results-container').style.display = 'block';
+
+                // Label
+                const label = data.label;
+                const labelEl = document.getElementById('labelText');
+                labelEl.textContent = label.replace('_', ' ').toUpperCase();
+                labelEl.className = `diag-type ${label}`;
+
+                document.getElementById('diagTimestamp').textContent =
+                    new Date().toTimeString().slice(0, 8);
+
+                // Confidence ring
+                const conf = parseFloat(data.confidence);
+                document.getElementById('confPct').textContent = conf + '%';
+                const circumference = 2 * Math.PI * 32;
+                const offset = circumference * (1 - conf / 100);
+                const ringFg = document.getElementById('ringFg');
+                // Color ring by tumor type
+                const ringColors = { glioma: '#ff4d6d', meningioma: '#00ff88', pituitary: '#4d9fff', no_tumor: '#00ffd5' };
+                ringFg.style.stroke = ringColors[label] || 'var(--cyan)';
+                setTimeout(() => { ringFg.style.strokeDashoffset = offset; }, 50);
+
+                // Prob bars
+                const probBars = document.getElementById('probBars');
+                probBars.innerHTML = Object.entries(data.all_probs).map(([cls, prob]) => `
+      <div class="prob-item">
+        <div class="prob-meta">
+          <span class="prob-name">${cls.replace('_', ' ')}</span>
+          <span class="prob-pct">${prob}%</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill ${cls}" data-w="${prob}%" style="width:0%"></div>
+        </div>
+      </div>
+    `).join('');
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                    document.querySelectorAll('.bar-fill').forEach(el => {
+                        el.style.width = el.dataset.w;
+                    });
+                }));
+
+                // Overlay
+                const overlayImg = document.getElementById('overlay-img');
+                const segImgWrap = document.getElementById('segImgWrap');
+                segImgWrap.classList.add('scanning');
+                overlayImg.src = `data:image/png;base64,${data.overlay}`;
+                overlayImg.style.display = 'block';
+
+                setTimeout(() => segImgWrap.classList.remove('scanning'), 2000);
+
+            } catch (err) {
+                errorBar.style.display = 'block';
+            }
+
+            overlay.classList.remove('active');
+            prevContainer.classList.remove('scanning');
+            btn.disabled = false;
+            btn.classList.remove('running');
+            document.getElementById('btnLabel').textContent = 'Run Inference';
+            document.getElementById('btnIcon').style.display = '';
+        });
+    </script>
+</body>
+
+</html>
