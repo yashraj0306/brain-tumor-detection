@@ -16,7 +16,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git config --global user.email "you@example.com"
-          git config --global user.name "Your Name"
-          git remote add hf https://Jatinredhu:$HF_TOKEN@huggingface.co/spaces/Jatinredhu/brain-tumor-detection
+          git config --global user.email "yr4352@srmist.edu.in"
+          git config --global user.name "Yash Raj"
+          git remote add hf https://yashraj0306:$HF_TOKEN@huggingface.co/spaces/yashraj0306/brain-tumor-detection
           git push hf main --force

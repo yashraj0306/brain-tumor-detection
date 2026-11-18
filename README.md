@@ -13,7 +13,7 @@ An AI-powered MRI brain tumor detection system that performs simultaneous tumor 
 
 ## Live Demo
 
-[brain-tumor-detection.hf.space](https://jatinredhu-brain-tumor-detection.hf.space)
+[brain-tumor-detection.hf.space](https://yashraj0306-brain-tumor-detection.hf.space)
 
 ## Model Architecture
 
@@ -47,4 +47,4 @@ Upload an MRI brain scan image and the model will return:
 
 ## Author
 
-Made by [Jatin Redhu](https://github.com/Jatinredhu)
+Made by [Yash Raj](https://github.com/yashraj0306)
